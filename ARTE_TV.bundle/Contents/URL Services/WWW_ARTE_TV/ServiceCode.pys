@@ -1,0 +1,60 @@
+import urllib
+import re
+
+####################################################################################################
+
+def MetadataObjectForURL(url):
+  Log ("ARTE +7 MetadataObjectForURL " + url )
+  try:
+    html = HTML.ElementFromURL(url)
+  except:
+    raise Ex.MediaNotAvailable
+  title = html.xpath('//meta[@property="og:title"]/@content')[0]
+  thumb = html.xpath('//meta[@property="og:image"]/@content')[0]
+  summary = html.xpath('//meta[@property="og:description"]/@content')[0]
+  return VideoClipObject ( title = title, summary = summary, thumb = thumb )
+
+####################################################################################################
+
+def MediaObjectsForURL(url):
+  Log ("ARTE +7 MediaObjectsForURL " + url )
+  return [MediaObject(container = Container.MP4, video_codec = VideoCodec.H264, audio_codec = AudioCodec.AAC,video_resolution = "sd",
+      optimized_for_streaming = True,
+      audio_channels = 2,                                                  
+      parts = [PartObject(key=Callback(PlayVideo, url = url))]
+    )
+  ]                                                                      
+
+def PlayVideo(url):
+  Log ("ARTE +7 " + url )
+  # Request the URL
+  try:
+    html = HTML.ElementFromURL(url)
+    player_url = html.xpath('.//div[contains(@class, "video-container")]/@arte_vp_url')[0]
+  except:
+    raise Ex.MediaNotAvailable
+  Log ("ARTE +7 Player url " + player_url )
+  try:
+    config_json = HTML.StringFromElement(HTML.ElementFromURL(player_url))
+  except:
+    raise Ex.MediaNotAvailable
+  # find all "url" keep only http
+  possible_urls = config_json.split("\"url\"")
+  urls = [];
+  for possible_url in possible_urls:
+    url = possible_url.split(",")[0]
+    url = url.split(":",1)[1]
+    url = url.replace("\\", "")
+    url = url.replace("\"", "")
+    url = url.replace(" ", "")
+    if url.find ("http")>=0:
+      if url.find (".mp4")>0:
+        if url.find ("MP4-2200")>0:
+          Log ("ARTE +7 possible url " + url)
+          urls.append (url)
+  Log ("ARTE +7 found url " + str(len(urls))) 
+  video_url = urls[len(urls)-1]
+  Log ("ARTE +7 url " + video_url )
+  Log.Exception(video_url)
+  return Redirect(video_url)
+  
