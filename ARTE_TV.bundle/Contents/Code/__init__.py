@@ -89,7 +89,7 @@ def GetPlus7ItemList(url, title2, page=''):
   videos = json.split("{")
   for video in videos:
     try:
-      video_page_url = ARTE_URL + GetPlus7Param (video, "\"url\"", 1, 1)
+      video_page_url = GetPlus7Param (video, "\"url\"", 1, 1)
       Log ("video url: " + video_page_url)
       title = GetPlus7Param (video, "\"title\"", 0, 0).decode("unicode_escape")
       # Log ("title: " + title)
