@@ -25,20 +25,96 @@ def MediaObjectsForURL(url):
     )
   ]                                                                      
 
+#def PlayVideo(url):
+#  Log ("ARTE +7 " + url )
+#  # Request the URL
+#  try:
+#    html = HTML.ElementFromURL(url)
+#    player_url = html.xpath('.//div[contains(@class, "video-container")]/@arte_vp_url')[0]
+#  except:
+#    raise Ex.MediaNotAvailable
+#  Log ("ARTE +7 Player url " + player_url )
+#  try:
+#    config_json = HTML.StringFromElement(HTML.ElementFromURL(player_url))
+#  except:
+#    raise Ex.MediaNotAvailable
+#  # find all "url" keep only http
+#  possible_urls = config_json.split("\"url\"")
+#  urls = [];
+#  for possible_url in possible_urls:
+#    url = possible_url.split(",")[0]
+#    url = url.split(":",1)[1]
+#    url = url.replace("\\", "")
+#    url = url.replace("\"", "")
+#    url = url.replace(" ", "")
+#    if url.find ("http")>=0:
+#      if url.find (".mp4")>0:
+#        if url.find ("MP4-2200")>0:
+#          Log ("ARTE +7 possible url " + url)
+#          urls.append (url)
+#  Log ("ARTE +7 found url " + str(len(urls)))
+#  video_url = urls[len(urls)-1]
+#  Log ("ARTE +7 url " + video_url )
+#  Log.Exception(video_url)
+#  return Redirect(video_url)
+  
 def PlayVideo(url):
   Log ("ARTE +7 " + url )
-  # Request the URL
+  config_json = ""
+
   try:
     html = HTML.ElementFromURL(url)
-    player_url = html.xpath('.//div[contains(@class, "video-container")]/@arte_vp_url')[0]
   except:
     raise Ex.MediaNotAvailable
-  Log ("ARTE +7 Player url " + player_url )
-  try:
-    config_json = HTML.StringFromElement(HTML.ElementFromURL(player_url))
-  except:
-    raise Ex.MediaNotAvailable
-  # find all "url" keep only http
+
+  # test if we are Arte Concert
+  arte_vp_url_oembed = html.xpath('//div[contains(@class, "video-container")]/@arte_vp_url_oembed')
+  arte_vp_url = html.xpath('//div[contains(@class, "video-container")]/@arte_vp_url')
+  og_video = html.xpath('//meta[@property="og:video"]/@content')
+  Log ("ARTE +7 html.xpath %d %d %d", len (arte_vp_url), len (arte_vp_url_oembed), len (og_video))
+  #Log (arte_vp_url_oembed)
+  #Log (og_video)
+  if (len (og_video) > 0):
+    # arte + 7 web site
+    feedurl1 = og_video[0]
+    feedurl2 = feedurl1.split ("feedurl=")[1]
+    feedurl3 = urllib.unquote(feedurl2)
+    feedurl4 = feedurl3.split(";")[0]
+    Log ("ARTE +7 feed url " + feedurl4 )
+    # get json
+    try:
+      config_json = HTML.StringFromElement(HTML.ElementFromURL(feedurl4))
+    except:
+      raise Ex.MediaNotAvailable
+  else:
+    # probably arte + 7
+    # Request the URL
+    if (len (arte_vp_url) > 0):
+      player_url = arte_vp_url[0]
+      try:
+        config_json = HTML.StringFromElement(HTML.ElementFromURL(player_url))
+      except:
+        raise Ex.MediaNotAvailable
+    if (len (arte_vp_url_oembed) > 0):
+      player_url = arte_vp_url_oembed[0]
+      Log ("ARTE +7 Player url " + player_url )
+      # step 2 get api url
+      try:
+        config_player = HTML.StringFromElement(HTML.ElementFromURL(player_url))
+      except:
+        raise Ex.MediaNotAvailable
+      # step 3 get json url
+      try:
+        json_url1 = config_player.split("json_url=")[1]
+        json_url2 = urllib.unquote(json_url1)
+        Log ("ARTE +7 json url 2 " + json_url2 )
+        json_url3 = json_url2.split("\\")[0]
+        Log ("ARTE +7 json url 3 " + json_url3 )
+        config_json = HTML.StringFromElement(HTML.ElementFromURL(json_url3))
+      except:
+        raise Ex.MediaNotAvailable
+
+  # step 4 find all "url" keep only http
   possible_urls = config_json.split("\"url\"")
   urls = [];
   for possible_url in possible_urls:
@@ -52,9 +128,8 @@ def PlayVideo(url):
         if url.find ("MP4-2200")>0:
           Log ("ARTE +7 possible url " + url)
           urls.append (url)
-  Log ("ARTE +7 found url " + str(len(urls))) 
+  Log ("ARTE +7 found url " + str(len(urls)))
   video_url = urls[len(urls)-1]
   Log ("ARTE +7 url " + video_url )
   Log.Exception(video_url)
   return Redirect(video_url)
-  

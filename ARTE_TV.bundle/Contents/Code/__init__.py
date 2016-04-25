@@ -24,11 +24,9 @@ def MainMenu():
   oc = ObjectContainer(
     objects = [
       DirectoryObject(key = Callback(GetItemList, url='/fr', title2='Concerts French'), title = L('Arte Concerts French')),
-      # DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/fr/plus7.json', title2='Arte +7 French'), title = L('Arte +7 French')),
-      DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/fr/plus7/?zone=europe-de-fr', title2='Arte +7 French'), title = L('Arte +7 French')),
+      DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/fr/plus7/', title2='Arte +7 French'), title = L('Arte +7 French')),
       DirectoryObject(key = Callback(GetItemList, url='/de', title2='Concerts German'), title = L('Arte Concerts German')),
-      # DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/de/plus7.json', title2='Arte +7 German'), title = L('Arte +7 German'))
-      DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/de/plus7/?zone=europe-de-fr', title2='Arte +7 German'), title = L('Arte +7 German'))
+      DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/de/plus7/', title2='Arte +7 German'), title = L('Arte +7 German'))
     ]
   )                                 
   # append programs list directly
@@ -79,7 +77,7 @@ def GetPlus7Param (video, param, remove_slash, remove_spaces):
   
 ####################################################################################################
 
-def GetPlus7ItemListOld(url, title2, page=''):
+def GetPlus7ItemListOld2(url, title2, page=''):
   Log ("ARTE GetPlus7ItemList :" + url)
   Log.Exception('GetPlus7ItemList')
   oc = ObjectContainer(title2=title2, view_group='InfoList')
@@ -105,7 +103,7 @@ def GetPlus7ItemListOld(url, title2, page=''):
 
 ####################################################################################################
 
-def GetPlus7ItemList(url, title2, page=''):
+def GetPlus7ItemListOld2(url, title2, page=''):
   Log ("ARTE GetPlus7ItemList :" + url)
   Log.Exception('GetPlus7ItemList')
   oc = ObjectContainer(title2=title2, view_group='InfoList')
@@ -142,3 +140,42 @@ def GetPlus7ItemList(url, title2, page=''):
       pass    
   
   return oc
+
+####################################################################################################
+
+def GetPlus7ItemList(url, title2, page=''):
+  Log ("ARTE GetPlus7ItemList :" + url)
+  oc = ObjectContainer(title2=title2, view_group='InfoList')
+  program_url = ARTE_URL + url
+  Log ("ARTE +7 url : " + program_url)
+  html = HTML.ElementFromURL(program_url)
+  scripts = html.xpath('//script')
+  for script in scripts:
+    script_text = HTML.StringFromElement(script)
+    try:
+      img = ""
+      video_page_url = ""
+      title = ""
+      script_lines1 = script_text.split('{')
+      for script_line1 in script_lines1:
+        script_lines2 = script_line1.split('}')
+        for script_line2 in script_lines2:
+          script_lines3 = script_line2.split(',')
+          for script_line3 in script_lines3:
+            # Log ("Line : " + script_line3)
+            if (script_line3.find("\"url\"") > -1):
+              if (script_line3.find(".jpg") > -1):
+                img = GetPlus7Param (script_line3, "\"url\"", 1, 1)
+            if (script_line3.find("\"title\"") > -1):
+              title = GetPlus7Param (script_line3, "\"title\"", 0, 0).decode("unicode_escape")
+            if (script_line3.find("\"url\"") > -1):
+              if (script_line3.find("autoplay") > -1):
+                video_page_url = GetPlus7Param (script_line3, "\"url\"", 1, 1)
+                oc.add(VideoClipObject(url = video_page_url, title = title, thumb=img))
+
+    except:
+      Log.Exception("error adding VideoClipObject")
+      pass
+
+  return oc
+
