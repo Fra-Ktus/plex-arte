@@ -57,23 +57,83 @@ def MediaObjectsForURL(url):
 #  Log ("ARTE +7 url " + video_url )
 #  Log.Exception(video_url)
 #  return Redirect(video_url)
-  
-def PlayVideo(url):
-  Log ("ARTE +7 " + url )
-  config_json = ""
 
+def GetVideoURL(config_json):
+  possible_urls = config_json.split("\"url\"")
+  urls = [];
+  for possible_url in possible_urls:
+    url = possible_url.split(",")[0]
+    url = url.split(":",1)[1]
+    url = url.replace("\\", "")
+    url = url.replace("\"", "")
+    url = url.replace(" ", "")
+    if url.find ("http")>=0:
+      if url.find (".mp4")>0:
+        if url.find ("MP4-2200")>0:
+          Log ("ARTE +7 possible url " + url)
+          urls.append (url)
+  Log ("ARTE +7 found url " + str(len(urls)))
+  video_url = urls[len(urls)-1]
+  return video_url
+
+def GetVideoLangURL(config_json, lang):
+  class found_url:
+    bitrate=0
+    url=""
+    version_code=""
+  urls = [];
+  possible_urls = config_json.split("{")
+  for possible_url in possible_urls:
+    if possible_url.find ("http")>=0:
+      if possible_url.find ("url")>=0:
+        if possible_url.find ("versionCode")>=0:
+          if possible_url.find ("bitrate")>=0:
+            if possible_url.find (".mp4")>=0:
+              new_url = found_url()
+              lines = possible_url.split(",")
+              for line in lines:
+                line = line.replace(" ", "")
+                if line.find("\"url\":")>=0:
+                  new_url.url = line.split("\"url\":")[1]
+                  new_url.url = new_url.url.replace("\\", "")
+                  new_url.url = new_url.url.replace("\"", "")
+                if line.find("\"versionCode\":")>=0:
+                  new_url.version_code = line.split("\"versionCode\":")[1]
+                if line.find("\"bitrate\":")>=0:
+                  bitrate_str = line.split("\"bitrate\":")[1]
+                  new_url.bitrate = int(bitrate_str)
+              Log ("ARTE +7 possible url " + new_url.url)
+              Log ("ARTE +7 possible bitrate %d", new_url.bitrate)
+              Log ("ARTE +7 possible version code " + new_url.version_code)
+              urls.append (new_url)
+  Log ("ARTE +7 found url " + str(len(urls)))
+  # by default select the last one
+  video_url = urls[len(urls)-1].url
+  # now see if we get something that match what we need...
+  for url in urls:
+    if (url.bitrate > 2000):
+      if url.version_code.find(lang)>=0:
+        video_url = url.url
+      if (url.version_code == "VO"):
+        video_url = url.url
+  return video_url
+
+def PlayVideo(url):
+  # detect Germand -> VA or French -> VF
+  lang = "VA"
+  if url.find ("/fr/")>=0:
+    lang = "VF"
+  Log ("ARTE +7 " + lang + " url: " + url )
+  config_json = ""
   try:
     html = HTML.ElementFromURL(url)
   except:
     raise Ex.MediaNotAvailable
-
   # test if we are Arte Concert
   arte_vp_url_oembed = html.xpath('//div[contains(@class, "video-container")]/@arte_vp_url_oembed')
   arte_vp_url = html.xpath('//div[contains(@class, "video-container")]/@arte_vp_url')
   og_video = html.xpath('//meta[@property="og:video"]/@content')
   Log ("ARTE +7 html.xpath %d %d %d", len (arte_vp_url), len (arte_vp_url_oembed), len (og_video))
-  #Log (arte_vp_url_oembed)
-  #Log (og_video)
   if (len (og_video) > 0):
     # arte + 7 web site
     feedurl1 = og_video[0]
@@ -115,21 +175,9 @@ def PlayVideo(url):
         raise Ex.MediaNotAvailable
 
   # step 4 find all "url" keep only http
-  possible_urls = config_json.split("\"url\"")
-  urls = [];
-  for possible_url in possible_urls:
-    url = possible_url.split(",")[0]
-    url = url.split(":",1)[1]
-    url = url.replace("\\", "")
-    url = url.replace("\"", "")
-    url = url.replace(" ", "")
-    if url.find ("http")>=0:
-      if url.find (".mp4")>0:
-        if url.find ("MP4-2200")>0:
-          Log ("ARTE +7 possible url " + url)
-          urls.append (url)
-  Log ("ARTE +7 found url " + str(len(urls)))
-  video_url = urls[len(urls)-1]
+
+  # video_url = GetVideoURL (config_json)
+  video_url = GetVideoLangURL (config_json, lang)
   Log ("ARTE +7 url " + video_url )
   Log.Exception(video_url)
   return Redirect(video_url)
