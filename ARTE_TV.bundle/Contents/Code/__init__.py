@@ -23,9 +23,12 @@ def MainMenu():
 
   oc = ObjectContainer(
     objects = [
-      DirectoryObject(key = Callback(GetItemList, url='/fr', title2='Concerts French'), title = L('Arte Concerts French')),
+      DirectoryObject(key = Callback(GetConcertItemList, url='/fr', title2='Concerts French'), title = L('Arte Concerts French')),
+      DirectoryObject(key = Callback(GetConcertPageItemList, url='/fr/videos/musiques-actuelles', title2='Concerts French Musiques Actuelles'), title = L('Arte Concerts French Musiques Actuelles')),
+      DirectoryObject(key = Callback(GetConcertPageItemList, url='/fr/videos/musique-classique', title2='Concerts French Musique Classique'), title = L('Arte Concerts French Musique Classique')),
+      DirectoryObject(key = Callback(GetPlus7MusicCollectionItemList, url='/fr/videos/all', title2='Concerts French Collections'), title = L('Arte Concerts French Collections')),
       DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/fr/plus7/', title2='Arte +7 French'), title = L('Arte +7 French')),
-      DirectoryObject(key = Callback(GetItemList, url='/de', title2='Concerts German'), title = L('Arte Concerts German')),
+      DirectoryObject(key = Callback(GetConcertItemList, url='/de', title2='Concerts German'), title = L('Arte Concerts German')),
       DirectoryObject(key = Callback(GetPlus7ItemList, url='/guide/de/plus7/', title2='Arte +7 German'), title = L('Arte +7 German'))
     ]
   )                                 
@@ -35,9 +38,8 @@ def MainMenu():
 
 ####################################################################################################
 
-def GetItemList(url, title2, page=''):
-  Log ("ARTE GetItemList :" + url)
-  Log.Exception('GetItemList')
+def GetConcertItemList(url, title2, page=''):
+  Log ("ARTE GetConcertItemList :" + url)
   cookies = HTTP.CookiesForURL(ARTE_CONCERT_URL)
   oc = ObjectContainer(title2=title2, view_group='InfoList', http_cookies=cookies)
   Log.Exception('videos')
@@ -64,6 +66,39 @@ def GetItemList(url, title2, page=''):
 
 ####################################################################################################
 
+def GetConcertPageItemList(url, title2, page=''):
+  Log ("ARTE GetConcertItemList :" + url)
+  cookies = HTTP.CookiesForURL(ARTE_CONCERT_URL)
+  oc = ObjectContainer(title2=title2, view_group='InfoList', http_cookies=cookies)
+  Log.Exception('videos')
+  page_num = 0
+  while page_num < 10:
+    program_url = ARTE_CONCERT_URL + url + "?page=" + str (page_num)
+    page_num = page_num + 1
+    Log ("ARTE url : " + program_url)
+    html = HTML.ElementFromURL(program_url)
+    videos = html.xpath('//article')
+    if (len(videos)==0):
+        break
+    Log.Info(videos)
+    for video in videos:
+      Log.Info(video)
+      try:
+        video_page_url = ARTE_CONCERT_URL + video.xpath('.//div[contains(@class, "header-article")]/a/@href')[0]
+        Log ("video url: " + video_page_url)
+        title = unicode (video.xpath('.//div[contains(@class, "header-article")]//a/@title')[0])
+        # Log ("title: " + title)
+        img = video.xpath('.//div[contains(@class, "header-article")]//img/@src')[0]
+        # Log ("img: " + img)
+        oc.add(VideoClipObject(url = video_page_url, title = title, thumb=img))
+      except:
+        Log.Exception("error adding VideoClipObject")
+        pass
+        
+  return oc
+
+####################################################################################################
+
 def GetPlus7Param (video, param, remove_slash, remove_spaces):
   result = video.split(param)[1].split(",")[0]
   # clean the url...
@@ -74,72 +109,32 @@ def GetPlus7Param (video, param, remove_slash, remove_spaces):
   if remove_spaces > 0:
     result = result.replace(" ", "")
   return result
-  
-####################################################################################################
-
-def GetPlus7ItemListOld2(url, title2, page=''):
-  Log ("ARTE GetPlus7ItemList :" + url)
-  Log.Exception('GetPlus7ItemList')
-  oc = ObjectContainer(title2=title2, view_group='InfoList')
-  Log.Exception('videos')
-  program_url = ARTE_URL + url
-  Log ("ARTE +7 url : " + program_url)
-  json = HTML.StringFromElement(HTML.ElementFromURL(program_url))
-  json = json.split("[")[1].split("]")[0]
-  videos = json.split("{")
-  for video in videos:
-    try:
-      video_page_url = GetPlus7Param (video, "\"url\"", 1, 1)
-      Log ("video url: " + video_page_url)
-      title = GetPlus7Param (video, "\"title\"", 0, 0).decode("unicode_escape")
-      # Log ("title: " + title)
-      img = GetPlus7Param (video, "\"image_url\"", 1, 1)
-      # Log ("img: " + img)
-      oc.add(VideoClipObject(url = video_page_url, title = title, thumb=img))
-    except:
-      Log.Exception("error adding VideoClipObject")
-      pass    
-  return oc
 
 ####################################################################################################
 
-def GetPlus7ItemListOld2(url, title2, page=''):
+def GetPlus7MusicCollectionItemList(url, title2, page=''):
   Log ("ARTE GetPlus7ItemList :" + url)
-  Log.Exception('GetPlus7ItemList')
   oc = ObjectContainer(title2=title2, view_group='InfoList')
-  Log.Exception('videos')
-  program_url = ARTE_URL + url
-  Log ("ARTE +7 url : " + program_url)
+  program_url = ARTE_CONCERT_URL + url
+  Log ("ARTE +7 music collection url : " + program_url)
   html = HTML.ElementFromURL(program_url)
-  scripts = html.xpath('//script')
-  for script in scripts:
+  links = html.xpath('//div[contains(@id, "events")]/li')
+  for link in links:
     try:
-      js = HTML.StringFromElement(script)
-      # Log ("js: " + js)
-      js = js.split("js/page/home")[1]
-      # Log ("found script: " + js)
-      video_groups = js.split("videos")
-      for video_group in video_groups:
-        videos = video_group.split("{")
-        for video in videos:
-          try:
-            Log ("Test Video : " + video)
-            video_page_url = GetPlus7Param (video, "\"url\"", 1, 1)
-            Log ("video url: " + video_page_url)
-            title = GetPlus7Param (video, "\"title\"", 0, 0).decode("unicode_escape")
-            Log ("title: " + title)
-            img = GetPlus7Param (video, "\"thumbnail_url\"", 1, 1)
-            Log ("img: " + img)
-            oc.add(VideoClipObject(url = video_page_url, title = title, thumb=img))
-              
-          except:
-            pass
+      img = ""
+      video_page_url = ""
+      title = ""
+      video_page_url = video.xpath('./a//@href')[0]
+      img = video.xpath('./a/img//@src')[0]
+      title = video.xpath('./a/img//@title')[0]
+      oc.add(DirectoryObject(key = Callback(GetConcertItemList, url=video_page_url, title2=title), title = title, thumb=img))
 
     except:
       Log.Exception("error adding VideoClipObject")
-      pass    
-  
+      pass
+
   return oc
+
 
 ####################################################################################################
 
