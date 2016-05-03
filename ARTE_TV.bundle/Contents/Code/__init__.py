@@ -118,15 +118,16 @@ def GetPlus7MusicCollectionItemList(url, title2, page=''):
   program_url = ARTE_CONCERT_URL + url
   Log ("ARTE +7 music collection url : " + program_url)
   html = HTML.ElementFromURL(program_url)
-  links = html.xpath('//div[contains(@id, "events")]/li')
+  links = html.xpath('//div[contains(@id, "events")]//li')
+  Log ("ARTE +7 music collection url, found %d links", len(links))
   for link in links:
     try:
       img = ""
       video_page_url = ""
       title = ""
-      video_page_url = video.xpath('./a//@href')[0]
-      img = video.xpath('./a/img//@src')[0]
-      title = video.xpath('./a/img//@title')[0]
+      video_page_url = link.xpath('.//a//@href')[0]
+      img = link.xpath('.//a/img//@src')[0]
+      title = link.xpath('.//a/img//@title')[0]
       oc.add(DirectoryObject(key = Callback(GetConcertItemList, url=video_page_url, title2=title), title = title, thumb=img))
 
     except:
