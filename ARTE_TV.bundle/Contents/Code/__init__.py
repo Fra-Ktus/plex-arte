@@ -4,11 +4,13 @@ ARTE_URL  = 'http://www.arte.tv'
 
 ICON = 'arte_logo.png'
 ART = 'art-default.png'
+PREFIX = '/video/arte_tv'
+NAME = 'Arte Plugin'
 
 ####################################################################################################
 def Start():
 
-  Plugin.AddPrefixHandler('/video/arte_tv', MainMenu, 'ARTE_TV', ICON, ART)
+  Plugin.AddPrefixHandler(PREFIX, MainMenu, 'ARTE_TV', ICON, ART)
   Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
   ObjectContainer.title1 = 'ARTE_TV'
   ObjectContainer.content = ContainerContent.GenericVideos
@@ -19,6 +21,7 @@ def Start():
   HTTP.CacheTime = 1800
 
 ####################################################################################################
+@handler(PREFIX, NAME)
 def MainMenu():
 
   oc = ObjectContainer(
@@ -48,7 +51,7 @@ def MainMenu():
   return oc
 
 ####################################################################################################
-
+@route(PREFIX + '/channelmenu/GetConcertItemList')
 def GetConcertItemList(url, title2, page=''):
   Log ("ARTE GetConcertItemList :" + url)
   cookies = HTTP.CookiesForURL(ARTE_CONCERT_URL)
@@ -76,7 +79,7 @@ def GetConcertItemList(url, title2, page=''):
   return oc
 
 ####################################################################################################
-
+@route(PREFIX + '/channelmenu/GetConcertPageItemList')
 def GetConcertPageItemList(url, title2, page=''):
   Log ("ARTE GetConcertItemList :" + url)
   cookies = HTTP.CookiesForURL(ARTE_CONCERT_URL)
@@ -109,7 +112,7 @@ def GetConcertPageItemList(url, title2, page=''):
   return oc
 
 ####################################################################################################
-
+@route(PREFIX + '/channelmenu/GetPlus7Param')
 def GetPlus7Param (video, param, remove_slash, remove_spaces):
   result = video.split(param)[1].split(",")[0]
   # clean the url...
@@ -122,7 +125,7 @@ def GetPlus7Param (video, param, remove_slash, remove_spaces):
   return result
 
 ####################################################################################################
-
+@route(PREFIX + '/channelmenu/GetPlus7MusicCollectionItemList')
 def GetPlus7MusicCollectionItemList(url, title2, page=''):
   Log ("ARTE GetPlus7ItemList :" + url)
   oc = ObjectContainer(title2=title2, view_group='InfoList')
@@ -149,7 +152,7 @@ def GetPlus7MusicCollectionItemList(url, title2, page=''):
 
 
 ####################################################################################################
-
+@route(PREFIX + '/channelmenu/GetPlus7ItemList')
 def GetPlus7ItemList(url, title2, page=''):
   Log ("ARTE GetPlus7ItemList :" + url)
   oc = ObjectContainer(title2=title2, view_group='InfoList')
@@ -185,4 +188,3 @@ def GetPlus7ItemList(url, title2, page=''):
       pass
 
   return oc
-
