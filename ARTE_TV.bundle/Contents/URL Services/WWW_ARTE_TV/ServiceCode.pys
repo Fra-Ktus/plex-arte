@@ -118,7 +118,8 @@ def GetVideoLangURL(config_json, lang):
         video_url = url.url
   return video_url
 
-def PlayVideo(url):
+# not working anymore for plus 7...
+def PlayVideo2015(url):
   # detect Germand -> VA or French -> VF
   lang = "VA"
   if url.find ("/fr/")>=0:
@@ -140,7 +141,6 @@ def PlayVideo(url):
     feedurl2 = feedurl1.split ("feedurl=")[1]
     feedurl3 = urllib.unquote(feedurl2)
     feedurl4 = feedurl3.split(";")[0]
-    Log ("ARTE +7 feed url " + feedurl4 )
     # get json
     try:
       config_json = HTML.StringFromElement(HTML.ElementFromURL(feedurl4))
@@ -151,6 +151,7 @@ def PlayVideo(url):
     # Request the URL
     if (len (arte_vp_url) > 0):
       player_url = arte_vp_url[0]
+      Log ("ARTE Concert trying " + player_url )
       try:
         config_json = HTML.StringFromElement(HTML.ElementFromURL(player_url))
       except:
@@ -177,6 +178,66 @@ def PlayVideo(url):
   # step 4 find all "url" keep only http
 
   # video_url = GetVideoURL (config_json)
+  video_url = GetVideoLangURL (config_json, lang)
+  Log ("ARTE +7 url " + video_url )
+  Log.Exception(video_url)
+  return Redirect(video_url)
+
+# 2016 june plus 7 upgrade
+def PlayVideo(url):
+  # detect Germand -> VA or French -> VF
+  lang = "VA"
+  if url.find ("/fr/")>=0:
+    lang = "VF"
+  Log ("ARTE +7 " + lang + " url: " + url )
+  config_json = ""
+  
+  if url.find ("arte.tv/guide/")>=0:
+    # plus 7
+    # get program code from url...
+    codes=url.split("/")
+    index = 0
+    for code in codes:
+      index += 1
+      # skip base url
+      if (index > 3):
+        # code should be a string such as 060828-210-A
+        if (len(code)>10):
+          if code.find ("-")>=0:
+            break
+    Log ("ARTE +7 program code : " + code)
+    # build url such as https://api.arte.tv/api/player/v1/config/fr/060828-210-A&platform=ARTEPLUS7
+    if (lang == "VF"):
+      arte_vp_url = "https://api.arte.tv/api/player/v1/config/fr/"+code+"?platform=ARTEPLUS7"
+    else:
+      arte_vp_url = "https://api.arte.tv/api/player/v1/config/de/"+code+"?platform=ARTEPLUS7"
+    url_load_json = "http://www.arte.tv/arte_vp/index.php?json_url="+urllib.quote_plus(arte_vp_url)
+    Log ("ARTE +7 loading json from : " + url_load_json)
+    try:
+      config_json = HTML.StringFromElement(HTML.ElementFromURL(url_load_json))
+    except:
+      raise Ex.MediaNotAvailable
+   
+  else:
+    # concert.arte.tv
+    try:
+      html = HTML.ElementFromURL(url)
+    except:
+      raise Ex.MediaNotAvailable
+    # test if we are Arte Concert
+    arte_vp_url_oembed = html.xpath('//div[contains(@class, "video-container")]/@arte_vp_url_oembed')
+    arte_vp_url = html.xpath('//div[contains(@class, "video-container")]/@arte_vp_url')
+    og_video = html.xpath('//meta[@property="og:video"]/@content')
+    Log ("ARTE +7 html.xpath %d %d %d", len (arte_vp_url), len (arte_vp_url_oembed), len (og_video))
+    if (len (arte_vp_url) > 0):
+      player_url = arte_vp_url[0]
+      Log ("ARTE Concert trying " + player_url )
+      try:
+        config_json = HTML.StringFromElement(HTML.ElementFromURL(player_url))
+      except:
+        raise Ex.MediaNotAvailable
+ 
+  # find mp4
   video_url = GetVideoLangURL (config_json, lang)
   Log ("ARTE +7 url " + video_url )
   Log.Exception(video_url)
