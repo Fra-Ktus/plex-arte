@@ -185,6 +185,7 @@ def PlayVideo2015(url):
 
 # 2016 june plus 7 upgrade
 def PlayVideo(url):
+  Log ("ARTE +7 PlayVideo " + url )
   # detect Germand -> VA or French -> VF
   lang = "VA"
   if url.find ("/fr/")>=0:

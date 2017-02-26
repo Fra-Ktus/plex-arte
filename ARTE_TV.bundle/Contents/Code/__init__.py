@@ -1,4 +1,4 @@
-import re, string
+import re, string, urllib
 ARTE_CONCERT_URL  = 'http://concert.arte.tv'
 ARTE_URL  = 'http://www.arte.tv'
 
@@ -123,11 +123,21 @@ def GetPlus7Param (video, param, remove_slash, remove_spaces):
   if remove_spaces > 0:
     result = result.replace(" ", "")
   return result
+  
+####################################################################################################
+@route(PREFIX + '/channelmenu/ArteUnescape')
+def ArteUnescape (s):
+  result = s.replace("&amp;","&")
+  result = result.replace("&lt;","<")
+  result = result.replace("&gt;",">")
+  result = result.replace("&#39;","'")
+  result = result.replace("&quot;",'"')
+  return result
 
 ####################################################################################################
 @route(PREFIX + '/channelmenu/GetPlus7MusicCollectionItemList')
 def GetPlus7MusicCollectionItemList(url, title2, page=''):
-  Log ("ARTE GetPlus7ItemList :" + url)
+  Log ("ARTE GetPlus7MusicCollectionItemList :" + url)
   oc = ObjectContainer(title2=title2, view_group='InfoList')
   program_url = ARTE_CONCERT_URL + url
   Log ("ARTE +7 music collection url : " + program_url)
@@ -147,9 +157,8 @@ def GetPlus7MusicCollectionItemList(url, title2, page=''):
     except:
       Log.Exception("error adding VideoClipObject")
       pass
-
+      
   return oc
-
 
 ####################################################################################################
 @route(PREFIX + '/channelmenu/GetPlus7ItemList')
@@ -157,31 +166,31 @@ def GetPlus7ItemList(url, title2, page=''):
   Log ("ARTE GetPlus7ItemList :" + url)
   oc = ObjectContainer(title2=title2, view_group='InfoList')
   program_url = ARTE_URL + url
-  Log ("ARTE +7 url : " + program_url)
   html = HTML.ElementFromURL(program_url)
-  scripts = html.xpath('//script')
-  for script in scripts:
-    script_text = HTML.StringFromElement(script)
+  html_str = HTML.StringFromElement(html[1],encoding='utf8')
+  all_data = html_str.rpartition('data-categoriesvideos')
+  data_categoriesVideos = all_data[2].rpartition('data-clusters')[0]
+  data_categoriesVideos_clean = ArteUnescape(data_categoriesVideos)
+  videos = data_categoriesVideos_clean.split('\"adult\":')
+  for video in videos:
     try:
       img = ""
       video_page_url = ""
       title = ""
-      script_lines1 = script_text.split('{')
-      for script_line1 in script_lines1:
-        script_lines2 = script_line1.split('}')
-        for script_line2 in script_lines2:
-          script_lines3 = script_line2.split(',')
-          for script_line3 in script_lines3:
-            # Log ("Line : " + script_line3)
-            if (script_line3.find("\"url\"") > -1):
-              if (script_line3.find(".jpg") > -1):
-                img = GetPlus7Param (script_line3, "\"url\"", 1, 1)
-            if (script_line3.find("\"title\"") > -1):
-              title = GetPlus7Param (script_line3, "\"title\"", 0, 0).decode("unicode_escape")
-            if (script_line3.find("\"url\"") > -1):
-              if (script_line3.find("autoplay") > -1):
-                video_page_url = GetPlus7Param (script_line3, "\"url\"", 1, 1)
-                oc.add(VideoClipObject(url = video_page_url, title = title, thumb=img))
+      script_lines = video.split(',')
+      for script_line in script_lines:
+        if (script_line.find('\"thumbnail_url\"') > -1):
+          img = GetPlus7Param (script_line, '\"thumbnail_url\"', 1, 1)
+        if (script_line.find('\"title\"') > -1):
+          title = GetPlus7Param (script_line, "\"title\"", 0, 0).decode("unicode_escape")
+        if (script_line.find('\"url\"') > -1):
+          if (script_line.find('.jpg') == -1):
+            video_page_url = GetPlus7Param (script_line, '\"url\"', 1, 1)
+            if (video_page_url.find('arte.tv/guide') > -1):
+              Log ("title : " + title)
+              Log ("img : " + img)
+              Log ("video_page_url : " + video_page_url)
+              oc.add(VideoClipObject(url = video_page_url, title = title, thumb=img))
 
     except:
       Log.Exception("error adding VideoClipObject")
